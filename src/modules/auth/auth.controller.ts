@@ -9,15 +9,15 @@ const signupUser = async (req: Request, res: Response) => {
             statusCode: 201,
             success: true,
             message: "User created successfully",
-            data: result,
+            data: result.rows[0],
         })
-    } catch (error:any) {
-sendResponse(res,{
-    statusCode:400,
-    message:error.message,
-    success:false
-    
-})
+    } catch (error: any) {
+        sendResponse(res, {
+            statusCode: 400,
+            message: error.message,
+            success: false
+
+        })
     }
 }
 
