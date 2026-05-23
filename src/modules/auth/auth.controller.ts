@@ -11,11 +11,12 @@ const signupUser = async (req: Request, res: Response) => {
             message: "User registered successfully",
             data: result.rows[0],
         })
-    } catch (error: any) {
+    } catch (error: unknown) {
         sendResponse(res, {
             statusCode: 400,
-            message: error.message,
-            success: false
+            message: "Failed to register user",
+            success: false,
+            errors: error instanceof Error ? error.message : "An unknown error occurred"
 
         })
     }
@@ -23,24 +24,18 @@ const signupUser = async (req: Request, res: Response) => {
 const loginUser = async (req: Request, res: Response) => {
     try {
         const result = await AuthService.loginUser(req.body);
-        const {refreshToken} =result.Token;
-        res.cookie("refreshToken",refreshToken,{
-                secure:false,// in production it is true 
-                httpOnly:true,
-                sameSite:"lax"
-                 
-              })
         sendResponse(res, {
-            statusCode: 201,
+            statusCode: 200,
             success: true,
             message: "Login successful",
             data: result,
         })
-    } catch (error: any) {
+    } catch (error: unknown) {
         sendResponse(res, {
-            statusCode: 400,
-            message: error.message,
-            success: false
+            statusCode: 401,
+            message: "Login failed",
+            success: false,
+            errors: error instanceof Error ? error.message : "An unknown error occurred"
 
         })
     }

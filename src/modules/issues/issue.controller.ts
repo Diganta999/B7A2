@@ -12,22 +12,23 @@ const createIssue =async(req:Request,res:Response)=>{
     const result = await IssueServices.createIssue(user,req.body)
     sendResponse(res,{
         message:"Issue created successfully",
-        statusCode:400,
+        statusCode: 201,
         success:true,
         data:result.rows[0]
     })
-   } catch (error:any) {
+   } catch (error: unknown) {
     sendResponse(res,{
-        message:error.message,
+        message:"Failed to create issue",
         statusCode:400,
-        success:false
+        success:false,
+        errors: error instanceof Error ? error.message : "Unknown error"
     })
    }
 }
 
 const getAllIssues = async (req: Request, res: Response) => {
     try {
-        const issues = await IssueServices.getAllIssues(req.query);
+        const issues = await IssueServices.getAllIssues(req.query as Record<string, unknown>);
 
         sendResponse(res, {
             message: "Issues retrieved successfully",
@@ -35,11 +36,12 @@ const getAllIssues = async (req: Request, res: Response) => {
             success: true,
             data: issues
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         sendResponse(res, {
-            message: error.message,
+            message: "Failed to retrieve issues",
             statusCode: 500,
-            success: false
+            success: false,
+            errors: error instanceof Error ? error.message : "Unknown error"
         });
     }
 };
@@ -53,7 +55,8 @@ const getSingleIssue = async (req: Request, res: Response) => {
             return sendResponse(res, {
                 message: "Issue not found",
                 statusCode: 404,
-                success: false
+                success: false,
+                errors: "No issue exists with the provided ID"
             });
         }
 
@@ -63,11 +66,12 @@ const getSingleIssue = async (req: Request, res: Response) => {
             success: true,
             data: issue
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         sendResponse(res, {
             message: "Failed to retrieve issue",
             statusCode: 500,
-            success: false
+            success: false,
+            errors: error instanceof Error ? error.message : "Unknown error"
         });
     }
 };
@@ -90,20 +94,46 @@ const updateIssue = async (req: Request, res: Response) => {
             success: true,
             data: updatedIssue
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         // Map service layer errors to appropriate HTTP status codes
         let statusCode = 400; // Bad Request defaults
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         
-        if (error.message === "Issue not found") {
+        if (errorMessage === "Issue not found") {
             statusCode = 404; // Not Found
-        } else if (error.message.includes("permission")) {
+        } else if (errorMessage.includes("permission")) {
             statusCode = 403; // Forbidden
+        } else if (errorMessage.includes("resolved") || errorMessage.includes("conflict")) {
+            statusCode = 409; // Conflict
         }
 
         sendResponse(res, {
-            message: error.message,
+            message: "Failed to update issue",
             statusCode: statusCode,
-            success: false
+            success: false,
+            errors: errorMessage
+        });
+    }
+};
+
+const deleteIssue = async (req: Request, res: Response) => {
+    try {
+        const issueId = req.params.id as string;
+        
+        await IssueServices.deleteIssue(issueId);
+
+        sendResponse(res, {
+            message: "Issue deleted successfully",
+            statusCode: 200,
+            success: true
+        });
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        sendResponse(res, {
+            message: "Failed to delete issue",
+            statusCode: errorMessage === "Issue not found" ? 404 : 500,
+            success: false,
+            errors: errorMessage
         });
     }
 };
@@ -112,5 +142,6 @@ export const IssueController ={
     createIssue,
     getAllIssues,
     getSingleIssue,
-    updateIssue
+    updateIssue,
+    deleteIssue
 }

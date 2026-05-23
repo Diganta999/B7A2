@@ -2,22 +2,30 @@ import { pool } from "../../db";
 import type { IUser } from "../users/user.interface";
 import type { IIssue } from "./issue.interface";
 
-const createIssue=async(userData:IUser,data:IIssue)=>{
-   const {title,description,type}=data;
-   const user = userData;
-   const reporter_id= user.id 
-   
-   const result = await pool.query(`
-    INSERT INTO issues(title,description,type,reporter_id) VALUES($1,$2,$3,$4) 
-    RETURNING *
+const createIssue = async (userData: IUser, data: IIssue) => {
+    const { title, description, type } = data;
     
-    `,[title,description,type,reporter_id])
+    if (!title || title.length > 150) {
+        throw new Error("Validation Error: Title is required and must be maximum 150 characters.");
+    }
+    if (!description || description.length < 20) {
+        throw new Error("Validation Error: Description is required and must be minimum 20 characters.");
+    }
+    if (type !== "bug" && type !== "feature_request") {
+        throw new Error("Validation Error: Type must be either 'bug' or 'feature_request'.");
+    }
 
-    return result
+    const reporter_id = userData.id;
 
-}
+    const result = await pool.query(`
+        INSERT INTO issues(title,description,type,reporter_id) VALUES($1,$2,$3,$4) 
+        RETURNING *
+    `, [title, description, type, reporter_id]);
 
-const getAllIssues = async (query: any) => {
+    return result;
+};
+
+const getAllIssues = async (query: Record<string, unknown>) => {
     const { sort = "newest", type, status } = query;
 
     // Default sorting is newest (created_at DESC)
@@ -132,26 +140,49 @@ const updateIssue = async (issueId: string, currentUser: IUser, updateData: Part
         throw new Error("You do not have permission to update this issue");
     }
 
+    if (!isMaintainer && existingIssue.status === "resolved") {
+        throw new Error("Cannot edit a resolved issue (conflict)");
+    }
+
     // 3. Dynamically build the SQL update query based on provided fields
-    // Note: The instruction specifies updating "title, description, or type", so status updates are ignored here.
-    const { title, description, type } = updateData;
+    const { title, description, type, status } = updateData;
     const queryFields: string[] = [];
-    const queryValues: any[] = [];
+    const queryValues: unknown[] = [];
 
     // Only add fields to the query if they were provided in the request
-    if (title) {
+    if (title !== undefined) {
+        if (title.length === 0 || title.length > 150) {
+            throw new Error("Validation Error: Title must be maximum 150 characters.");
+        }
         queryValues.push(title);
         queryFields.push(`title = $${queryValues.length}`);
     }
     
-    if (description) {
+    if (description !== undefined) {
+        if (description.length < 20) {
+            throw new Error("Validation Error: Description must be minimum 20 characters.");
+        }
         queryValues.push(description);
         queryFields.push(`description = $${queryValues.length}`);
     }
     
-    if (type) {
+    if (type !== undefined) {
+        if (type !== "bug" && type !== "feature_request") {
+            throw new Error("Validation Error: Type must be either 'bug' or 'feature_request'.");
+        }
         queryValues.push(type);
         queryFields.push(`type = $${queryValues.length}`);
+    }
+
+    if (status !== undefined) {
+        if (!isMaintainer) {
+            throw new Error("Validation Error: Only maintainers can change issue workflow status.");
+        }
+        if (status !== "open" && status !== "in_progress" && status !== "resolved") {
+            throw new Error("Validation Error: Status must be 'open', 'in_progress', or 'resolved'.");
+        }
+        queryValues.push(status);
+        queryFields.push(`status = $${queryValues.length}`);
     }
 
     // If no fields were provided to update, return the existing issue
@@ -179,9 +210,25 @@ const updateIssue = async (issueId: string, currentUser: IUser, updateData: Part
     return updatedIssue;
 };
 
+/**
+ * Permanently deletes an issue by its ID.
+ */
+const deleteIssue = async (issueId: string) => {
+    // We execute the delete query and return the deleted row to check if it existed
+    const result = await pool.query(`DELETE FROM issues WHERE id = $1 RETURNING *`, [issueId]);
+    const deletedIssue = result.rows[0];
+
+    if (!deletedIssue) {
+        throw new Error("Issue not found");
+    }
+
+    return deletedIssue;
+};
+
 export const IssueServices = {
     createIssue,
     getAllIssues,
     getSingleIssue,
-    updateIssue
+    updateIssue,
+    deleteIssue
 }

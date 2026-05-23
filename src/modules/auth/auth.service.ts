@@ -5,7 +5,16 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken"
 
 const signupUser = async (payload: IUser) => {
-    const { name, email, password, role } = payload;
+    const { name, email, password, role = "contributor" } = payload;
+    
+    if (!name || !email || !password) {
+        throw new Error("Validation Error: Name, email, and password must be provided.");
+    }
+    
+    if (role !== "contributor" && role !== "maintainer") {
+        throw new Error("Validation Error: Role must be either 'contributor' or 'maintainer'.");
+    }
+
     const hashPassword = await bcrypt.hash(password, Number(envConfig.salt_rounds));
     const result = await pool.query(`
         
@@ -40,8 +49,7 @@ const loginUser = async(payload:Partial<IUser>)=>{
         }
         const accessToken =  jwt.sign(jwtPayload,envConfig.jwt_access_secret as string,{ expiresIn:envConfig.ACCESS_TOKEN_EXPIRED_TIME } as jwt.SignOptions)
  
-        const refreshToken = jwt.sign(jwtPayload, envConfig.jwt_refresh_secret as string, { expiresIn: envConfig.REFRESH_TOKEN_EXPIRED_TIME as string }as jwt.SignOptions)
-        return {Token:{accessToken,refreshToken},user}
+        return { token: accessToken, user: user }
 }
 
 

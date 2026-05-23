@@ -10,10 +10,10 @@ const checkAuth = (...authRole: string[]) => {
 
       if (!token) {
         return sendResponse(res,{
-            message:"unauthorized",
+            message: "Missing or invalid JWT token",
             statusCode:401,
-            success:false
-
+            success:false,
+            errors: "Unauthorized"
         })
       }
 
@@ -21,10 +21,20 @@ const checkAuth = (...authRole: string[]) => {
         token = token.slice(7);
       }
 
-      const decodedToken = jwt.verify(
-        token,
-        envConfig.jwt_access_secret as string
-      ) as JwtPayload;
+      let decodedToken;
+      try {
+        decodedToken = jwt.verify(
+          token,
+          envConfig.jwt_access_secret as string
+        ) as JwtPayload;
+      } catch (err: unknown) {
+        return sendResponse(res, {
+            message: "Expired or invalid JWT token",
+            statusCode: 401,
+            success: false,
+            errors: err instanceof Error ? err.message : "Invalid token"
+        });
+      }
 
       const userData = await pool.query(
         `SELECT * FROM users WHERE id=$1`,
@@ -35,27 +45,33 @@ const checkAuth = (...authRole: string[]) => {
 
       if (!user) {
         return sendResponse(res,{
-             message: "user not found",
+             message: "User not found",
              statusCode:404,
-             success:false
+             success:false,
+             errors: "No user matching token"
         })
       }
       
 
       if (authRole.length && !authRole.includes(user.role)) {
         return sendResponse(res,{
-            message: "forbidden" ,
+            message: "Insufficient permissions" ,
             statusCode:403,
-            success:false
+            success:false,
+            errors: "Forbidden"
         })
       }
 
       req.user = user;
 
       next();
-    } catch (error) {
-      return res.status(401).json({
-        message: "invalid token",
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "invalid token";
+      return sendResponse(res, {
+        message: "Invalid or expired token",
+        statusCode: 401,
+        success: false,
+        errors: errorMessage
       });
     }
   };
