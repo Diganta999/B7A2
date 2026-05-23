@@ -34,12 +34,20 @@ const checkAuth = (...authRole: string[]) => {
       const user = userData.rows[0];
 
       if (!user) {
-        return res.status(401).json({ message: "user not found" });
+        return sendResponse(res,{
+             message: "user not found",
+             statusCode:404,
+             success:false
+        })
       }
       
 
       if (authRole.length && !authRole.includes(user.role)) {
-        return res.status(403).json({ message: "forbidden" });
+        return sendResponse(res,{
+            message: "forbidden" ,
+            statusCode:403,
+            success:false
+        })
       }
 
       req.user = user;
