@@ -3,8 +3,7 @@
 **DevPulse** is a collaborative platform for software teams to report bugs, suggest features, and coordinate resolutions.
 
 ## 🔗 Live URL
-**Live API Link:** [Insert Your Live URL Here]  
-*(Replace the link above with your actual deployed Vercel/Render URL before submission)*
+**Live API Link:** [https://devpulsebackendserver.vercel.app/](https://devpulsebackendserver.vercel.app/)
 
 ## ✨ Features
 - **User Authentication:** Secure JWT-based registration and login system.
@@ -58,18 +57,18 @@
 ## 📡 API Endpoint List
 
 ### **Authentication**
-- `POST /api/auth/signup` - Register a new user (`contributor` or `maintainer`).
-- `POST /api/auth/login` - Authenticate and receive a JWT.
+- `POST https://devpulsebackendserver.vercel.app/api/auth/signup` - Register a new user (`contributor` or `maintainer`).
+- `POST https://devpulsebackendserver.vercel.app/api/auth/login` - Authenticate and receive a JWT.
 
 ### **Issues**
-- `POST /api/issues` - Create a new issue (Auth required).
-- `GET /api/issues` - Get all issues (Supports query params: `sort`, `type`, `status`).
-- `GET /api/issues/:id` - Get full details of a specific issue.
-- `PATCH /api/issues/:id` - Update an issue (Auth required; specific rules based on role/status).
-- `DELETE /api/issues/:id` - Delete an issue (`maintainer` only).
+- `POST https://devpulsebackendserver.vercel.app/api/issues` - Create a new issue (Auth required).
+- `GET https://devpulsebackendserver.vercel.app/api/issues` - Get all issues (Supports query params: `sort`, `type`, `status`).
+- `GET https://devpulsebackendserver.vercel.app/api/issues/:id` - Get full details of a specific issue.
+- `PATCH https://devpulsebackendserver.vercel.app/api/issues/:id` - Update an issue (Auth required; specific rules based on role/status).
+- `DELETE https://devpulsebackendserver.vercel.app/api/issues/:id` - Delete an issue (`maintainer` only).
 
 ### **System Metrics**
-- `GET /api/metrics` - Access internal system metrics (`maintainer` only).
+- `GET https://devpulsebackendserver.vercel.app/api/metrics` - Access internal system metrics (`maintainer` only).
 
 ## 🗄️ Database Schema Summary
 
